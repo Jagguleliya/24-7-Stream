@@ -1,0 +1,19 @@
+# Environment & Secrets
+.env
+stream.log
+assets/overlays/upi_qr.png
+
+# Video & Audio temporary test files
+preview_output.mp4
+standby_preview.mp4
+*.mp4
+*.mp3
+*.wav
+*.ts
+*.jpg
+*.png.bak
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/

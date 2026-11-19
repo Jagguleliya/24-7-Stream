@@ -1,0 +1,72 @@
+{
+    "priority_channels": [
+        {
+            "name": "IShowSpeed",
+            "platform": "youtube",
+            "url": "https://www.youtube.com/@IShowSpeed/live",
+            "priority": 1
+        }
+    ],
+    "stream_keys": {
+        "youtube": "",
+        "kick": ""
+    },
+    "upi_id": "",
+    "stream_settings": {
+        "resolution": "1280x720",
+        "fps": 30,
+        "video_bitrate": "2800k",
+        "audio_bitrate": "128k",
+        "preset": "ultrafast",
+        "audio_delay_ms": 0,
+        "encoder_local_amd": "h264_amf",
+        "encoder_cloud": "libx264"
+    },
+    "avatar": {
+        "enabled": true,
+        "position": "bottom_right",
+        "size": 150,
+        "voice_interval_seconds": 180,
+        "voice_lines": [
+            "Welcome everyone! Have fun watching the stream!",
+            "If you're enjoying, scan the QR code to support us!",
+            "Drop a superchat and I'll shout you out!",
+            "GTA 6 hype is real! Let's gooo!",
+            "Don't forget to like, subscribe and share the stream!",
+            "Support the stream! Scan the QR code on screen!",
+            "Type in chat! Let's make this stream lit!",
+            "Share this stream with your friends!",
+            "Every donation helps keep this stream running 24 7!"
+        ]
+    },
+    "qr_overlay": {
+        "enabled": true,
+        "image_path": "assets/overlays/upi_qr.png",
+        "position": "top_right",
+        "size": 160,
+        "label": "Support - Scan to Pay"
+    },
+    "chat_bot": {
+        "enabled": true,
+        "reminder_interval_seconds": 300,
+        "messages": [
+            "🔥 ISHOWSPEED PLAYING GTA 6 LIVE! Drop a Like & Subscribe! #GTA6 #IShowSpeed #GTAVI #SpeedLive",
+            "💰 Support the 24/7 Stream! Scan the QR code on screen or send a Superchat! #GTA6",
+            "🎮 Enjoying the GTA 6 Early Access gameplay? Share this stream with your squad! #GTA6Live #SpeedLive",
+            "⭐ Drop a Superchat or scan QR code to get pinned & shouted out on stream! #GTA6",
+            "❤️ Like & Subscribe for 24/7 non-stop GTA 6 gameplay and Speed streams! #IShowSpeed #GTAVI",
+            "🚀 Speed is going crazy in GTA 6! Type in chat and let us know what you think! #GTA6 #SpeedLive",
+            "💎 Top supporters get featured live on screen! Scan the QR code or drop a Superchat! #GTA6"
+        ]
+    },
+    "standby": {
+        "video_loop": "assets/video_loops/standby.mp4",
+        "audio_loop": "assets/audio/lofi_mix.mp3",
+        "text_overlay": "🎮 IShowSpeed Watch Party • Speed is currently offline • Stay tuned! 🎮"
+    },
+    "health_server": {
+        "port": 8080
+    },
+    "poll_interval_seconds": 30,
+    "preview_mode": false
+}

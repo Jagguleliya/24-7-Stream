@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: gta6-24-7-stream
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: PREVIEW_MODE
+        value: "false"
+      - key: YOUTUBE_STREAM_KEY
+        sync: false
+      - key: KICK_STREAM_KEY
+        sync: false

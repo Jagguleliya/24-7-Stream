@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  stream-engine:
+    build: .
+    container_name: gta6-stream-engine
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - YOUTUBE_STREAM_KEY=${YOUTUBE_STREAM_KEY:-}
+      - KICK_STREAM_KEY=${KICK_STREAM_KEY:-}
+    volumes:
+      - ./config.json:/app/config.json
+      - ./assets:/app/assets
+      - ./stream.log:/app/stream.log
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
