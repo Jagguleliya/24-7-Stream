@@ -93,7 +93,7 @@ def generate_voice_loop(interval_seconds: int = 120, initial_delay: int = 2, pre
     ]
 
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
         if res.returncode == 0 and VOICE_LOOP_FILE.exists():
             logger.info(f"✅ Generated voice loop ({inp_count} segments) -> {VOICE_LOOP_FILE}")
             return str(VOICE_LOOP_FILE)

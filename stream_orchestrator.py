@@ -66,22 +66,33 @@ def load_config() -> dict:
         return json.load(f)
 
 
-def detect_encoder() -> str:
-    """Detect best available encoder: AMD AMF > NVENC > libx264."""
+def test_encoder_works(enc: str) -> bool:
+    """Verifies that an encoder can actually allocate hardware and encode a test frame."""
     try:
-        r = subprocess.run(
-            ["ffmpeg", "-hide_banner", "-encoders"],
-            capture_output=True, text=True, timeout=10
-        )
-        if "h264_amf" in r.stdout:
-            logger.info("🎮 Using AMD AMF hardware encoder")
-            return "h264_amf"
-        if "h264_nvenc" in r.stdout:
-            logger.info("🎮 Using NVIDIA NVENC hardware encoder")
-            return "h264_nvenc"
+        cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "color=s=64x64:d=0.04", "-c:v", enc, "-frames:v", "1", "-f", "null", "-"]
+        res = subprocess.run(cmd, capture_output=True, timeout=5)
+        return res.returncode == 0
     except Exception:
-        pass
-    logger.info("💻 Using CPU libx264 encoder")
+        return False
+
+
+def detect_encoder() -> str:
+    """Detect best available encoder with live hardware capability testing."""
+    force = os.environ.get("FORCE_ENCODER", "").strip().lower()
+    if force in ("libx264", "h264_amf", "h264_nvenc"):
+        logger.info(f"⚙️ Using forced encoder from environment: {force}")
+        return force
+
+    # Cloud containers (Render, Railway, Docker on CPU servers) default to libx264
+    if os.environ.get("RENDER") or os.environ.get("PORT"):
+        logger.info("☁️ Cloud container detected — testing hardware encoders...")
+
+    for enc, name in [("h264_amf", "AMD AMF"), ("h264_nvenc", "NVIDIA NVENC")]:
+        if test_encoder_works(enc):
+            logger.info(f"🎮 Hardware acceleration verified: {name} ({enc})")
+            return enc
+
+    logger.info("💻 Using CPU libx264 encoder (cloud verified)")
     return "libx264"
 
 

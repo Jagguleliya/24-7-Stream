@@ -11,6 +11,8 @@ services:
         value: 8080
       - key: PREVIEW_MODE
         value: "false"
+      - key: FORCE_ENCODER
+        value: "libx264"
       - key: YOUTUBE_STREAM_KEY
         sync: false
       - key: KICK_STREAM_KEY
