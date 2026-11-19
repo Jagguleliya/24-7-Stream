@@ -1,6 +1,7 @@
 # Environment & Secrets
 .env
 stream.log
+qr_base64.txt
 assets/overlays/upi_qr.png
 
 # Video & Audio temporary test files
