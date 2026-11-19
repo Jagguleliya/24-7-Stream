@@ -37,17 +37,42 @@ def load_env():
 
 
 def check_qr_asset():
-    """Restores private QR code from UPI_QR_BASE64 environment variable if provided."""
+    """Restores private QR code from Render Secret Files (/etc/secrets/) or environment variables."""
+    import base64
+    from pathlib import Path
+    target = Path("assets/overlays/upi_qr.png")
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    # Check Render Secret File locations
+    secret_candidates = [
+        Path("/etc/secrets/upi_qr.png"),
+        Path("/etc/secrets/upi_qr.b64"),
+        Path("upi_qr.png"),
+        Path("upi_qr.b64"),
+    ]
+    for candidate in secret_candidates:
+        if candidate.exists():
+            try:
+                data = candidate.read_bytes()
+                if data.startswith(b"\x89PNG"):
+                    target.write_bytes(data)
+                    logger.info(f"✅ Loaded QR code from {candidate}")
+                    return
+                else:
+                    decoded = base64.b64decode(data.strip())
+                    if decoded.startswith(b"\x89PNG"):
+                        target.write_bytes(decoded)
+                        logger.info(f"✅ Decoded base64 QR code from {candidate}")
+                        return
+            except Exception as e:
+                logger.warning(f"Error reading secret QR from {candidate}: {e}")
+
+    # Fallback: check environment variable
     qr_b64 = os.environ.get("UPI_QR_BASE64", "").strip()
     if qr_b64:
         try:
-            import base64
-            from pathlib import Path
-            qr_dest = Path("assets/overlays/upi_qr.png")
-            qr_dest.parent.mkdir(parents=True, exist_ok=True)
-            with open(qr_dest, "wb") as f:
-                f.write(base64.b64decode(qr_b64))
-            logger.info("✅ Restored private UPI QR code from environment variable")
+            target.write_bytes(base64.b64decode(qr_b64))
+            logger.info("✅ Restored QR code from UPI_QR_BASE64 env var")
         except Exception as e:
             logger.warning(f"Failed to decode UPI_QR_BASE64: {e}")
 

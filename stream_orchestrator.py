@@ -127,7 +127,11 @@ def build_ffmpeg_command(
 
     # QR code overlay image
     qr_path = qr_cfg.get("image_path", "assets/overlays/upi_qr.png")
-    if not os.path.exists(qr_path) and os.path.exists("assets/overlays/sample_qr.png"):
+    if os.path.exists("/etc/secrets/upi_qr.png"):
+        qr_path = "/etc/secrets/upi_qr.png"
+    elif os.path.exists("upi_qr.png"):
+        qr_path = "upi_qr.png"
+    elif not os.path.exists(qr_path) and os.path.exists("assets/overlays/sample_qr.png"):
         qr_path = "assets/overlays/sample_qr.png"
     has_qr = os.path.exists(qr_path) and qr_cfg.get("enabled", True)
     qr_input_idx = None
@@ -364,7 +368,11 @@ def run_standby_loop(config: dict, encoder: str, preview_mode: bool):
     next_input = 1
 
     qr_path = qr_cfg.get("image_path", "assets/overlays/upi_qr.png")
-    if not os.path.exists(qr_path) and os.path.exists("assets/overlays/sample_qr.png"):
+    if os.path.exists("/etc/secrets/upi_qr.png"):
+        qr_path = "/etc/secrets/upi_qr.png"
+    elif os.path.exists("upi_qr.png"):
+        qr_path = "upi_qr.png"
+    elif not os.path.exists(qr_path) and os.path.exists("assets/overlays/sample_qr.png"):
         qr_path = "assets/overlays/sample_qr.png"
     has_qr = os.path.exists(qr_path) and qr_cfg.get("enabled", True)
     qr_input_idx = None
