@@ -102,6 +102,7 @@ def build_ffmpeg_command(
     preview_mode: bool = False,
     preview_output: str = "preview_output.mp4",
     stream_urls: Optional[dict] = None,
+    streamer_name: str = "",
 ) -> list:
     """
     Builds the FFmpeg command. Supports direct HLS ingestion (stream_urls)
@@ -196,11 +197,13 @@ def build_ffmpeg_command(
     current_vid = "[base]"
 
     # Top viral caption banner with trending hashtags
+    s_display = (streamer_name or "GTA 6").upper()
     banner_w = w - 300
+    banner_text = f"{s_display} PLAYING GTA 6  |  #GTA6 #GTAVI #SpeedLive"
     filters.append(
         f"{current_vid}drawbox=x=110:y=12:w={banner_w}:h=38:color=black@0.75:t=fill,"
         f"drawbox=x=110:y=12:w={banner_w}:h=38:color=red@0.85:t=2,"
-        f"drawtext=text='ISHOWSPEED PLAYING GTA 6  |  #GTA6 #IShowSpeed #GTAVI #SpeedLive'"
+        f"drawtext=text='{banner_text}'"
         f":fontsize=18:fontcolor=yellow:borderw=2:bordercolor=black"
         f":x=125:y=22[with_banner]"
     )
@@ -209,7 +212,7 @@ def build_ffmpeg_command(
     # Ticker tape at bottom
     upi_id = os.environ.get("UPI_ID", "").strip() or config.get("upi_id", "").strip()
     upi_str = f"  -  UPI {upi_id}" if upi_id else ""
-    ticker_text = f"ISHOWSPEED GTA 6 LIVE STREAM  -  #GTA6 #IShowSpeed #GTAVI #SpeedLive #GTA6Gameplay  -  Support Stream via UPI Scan QR Code{upi_str}  -  Subscribe and Like the Stream!  -"
+    ticker_text = f"{s_display} GTA 6 LIVE STREAM  -  #GTA6 #GTAVI #SpeedLive #GTA6Gameplay  -  Support Stream via Scan QR Code{upi_str}  -  Subscribe and Like the Stream!  -"
     filters.append(
         f"{current_vid}drawtext=text='{ticker_text}'"
         f":fontsize=22:fontcolor=white:borderw=2:bordercolor=black"
@@ -321,16 +324,16 @@ def run_direct_stream(selected: LiveStream, config: dict, encoder: str, preview_
 
     if urls and urls.get("video"):
         logger.info("⚡ Ingesting direct HLS stream URLs (zero-pipe, frame-accurate sync)")
-        ffmpeg_cmd = build_ffmpeg_command(config, encoder, preview_mode, stream_urls=urls)
+        ffmpeg_cmd = build_ffmpeg_command(config, encoder, preview_mode, stream_urls=urls, streamer_name=selected.name)
         logger.info(f"🎬 Launching FFmpeg encoder: {encoder} (preview={preview_mode})")
         current_ffmpeg = subprocess.Popen(ffmpeg_cmd)
         return current_ffmpeg
     else:
         logger.warning("⚠️ Could not extract direct URLs, falling back to piped yt-dlp...")
-        return run_piped_stream(selected.url, config, encoder, preview_mode)
+        return run_piped_stream(selected.url, config, encoder, preview_mode, streamer_name=selected.name)
 
 
-def run_piped_stream(target_url: str, config: dict, encoder: str, preview_mode: bool):
+def run_piped_stream(target_url: str, config: dict, encoder: str, preview_mode: bool, streamer_name: str = ""):
     """
     Spawns yt-dlp to mux video+audio to stdout, and pipes directly to FFmpeg stdin.
     """
@@ -349,7 +352,7 @@ def run_piped_stream(target_url: str, config: dict, encoder: str, preview_mode: 
     logger.info(f"📥 Starting synchronized stream ingest for: {target_url}")
     current_ytdlp = subprocess.Popen(ytdlp_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
-    ffmpeg_cmd = build_ffmpeg_command(config, encoder, preview_mode)
+    ffmpeg_cmd = build_ffmpeg_command(config, encoder, preview_mode, streamer_name=streamer_name)
     logger.info(f"🎬 Launching FFmpeg encoder: {encoder} (preview={preview_mode})")
     current_ffmpeg = subprocess.Popen(ffmpeg_cmd, stdin=current_ytdlp.stdout)
     current_ytdlp.stdout.close()  # Allow ytdlp to receive SIGPIPE if FFmpeg closes

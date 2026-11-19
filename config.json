@@ -5,8 +5,33 @@
             "platform": "youtube",
             "url": "https://www.youtube.com/@IShowSpeed/live",
             "priority": 1
+        },
+        {
+            "name": "Kai Cenat",
+            "platform": "youtube",
+            "url": "https://www.youtube.com/@KaiCenat/live",
+            "priority": 2
+        },
+        {
+            "name": "CarryisLive",
+            "platform": "youtube",
+            "url": "https://www.youtube.com/@CarryisLive/live",
+            "priority": 3
+        },
+        {
+            "name": "GamerFleet",
+            "platform": "youtube",
+            "url": "https://www.youtube.com/@GamerFleet/live",
+            "priority": 4
+        },
+        {
+            "name": "Mythpat",
+            "platform": "youtube",
+            "url": "https://www.youtube.com/@Mythpat/live",
+            "priority": 5
         }
     ],
+    "fallback_search": true,
     "stream_keys": {
         "youtube": "",
         "kick": ""
