@@ -32,6 +32,21 @@ def health():
     return jsonify({"status": "ok", "healthy": True}), 200
 
 
+@app.route("/debug_status")
+def debug_status():
+    yt_key = os.environ.get("YOUTUBE_STREAM_KEY", "").strip()
+    kick_key = os.environ.get("KICK_STREAM_KEY", "").strip()
+    return jsonify({
+        "youtube_key_configured": bool(yt_key),
+        "kick_key_configured": bool(kick_key),
+        "youtube_key_length": len(yt_key),
+        "kick_key_length": len(kick_key),
+        "preview_mode": os.environ.get("PREVIEW_MODE", "false"),
+        "force_encoder": os.environ.get("FORCE_ENCODER", ""),
+        "uptime_seconds": int(time.time() - start_time),
+    })
+
+
 @app.route("/status")
 def status():
     try:

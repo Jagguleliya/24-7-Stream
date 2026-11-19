@@ -6,6 +6,7 @@ to YouTube Live Chat and Kick Chat.
 
 import json
 import logging
+import os
 import random
 import time
 import threading
