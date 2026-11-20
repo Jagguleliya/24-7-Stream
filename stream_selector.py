@@ -35,14 +35,15 @@ def check_channel_live(channel: dict) -> Optional[LiveStream]:
                 "yt-dlp",
                 "--no-warnings",
                 "--no-download",
-                "--socket-timeout", "10",
+                "--socket-timeout", "5",
+                "--extractor-args", "youtube:player_client=android,web",
                 "--print",
                 "%(is_live)s|||%(title)s|||%(concurrent_view_count)s|||%(id)s",
                 url,
             ],
             capture_output=True,
             text=True,
-            timeout=15,
+            timeout=10,
         )
 
         if result.returncode != 0:
@@ -91,20 +92,21 @@ def check_channel_live(channel: dict) -> Optional[LiveStream]:
 def find_biggest_live_stream() -> Optional[LiveStream]:
     """
     Fast search for active live GTA VI streams with highest viewership.
-    Uses --flat-playlist so results return in under 2 seconds!
+    Uses --flat-playlist and android,web client so results return in under 2 seconds!
     """
     logger.info("🔍 Fast search for top GTA live streams...")
     cmd = [
         "yt-dlp",
         "--no-warnings",
         "--flat-playlist",
-        "--socket-timeout", "10",
+        "--socket-timeout", "5",
+        "--extractor-args", "youtube:player_client=android,web",
         "--print",
         "%(id)s|||%(title)s|||%(channel)s",
         "ytsearch5:GTA 6 live stream",
     ]
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
         if res.returncode == 0 and res.stdout.strip():
             candidates = []
             for line in res.stdout.strip().split("\n"):
@@ -141,7 +143,7 @@ def get_best_stream_url(channel_url: str, platform: str = "youtube") -> Optional
     """
     Get the direct HLS/stream URLs (video + audio) for FFmpeg ingestion.
     Returns dict with 'video' and 'audio' keys, or None on failure.
-    Uses single-call fast format fallbacks.
+    Uses android/web extractor args for lightning-fast master m3u8 resolution.
     """
     is_twitch = "twitch.tv" in channel_url.lower() or platform == "twitch"
 
@@ -156,40 +158,55 @@ def get_best_stream_url(channel_url: str, platform: str = "youtube") -> Optional
             )
             if result.returncode == 0 and result.stdout.strip():
                 url = result.stdout.strip().split("\n")[0]
-                logger.info(f"Got Twitch stream URL")
+                logger.info("Got Twitch stream URL")
                 return {"video": url, "audio": None}
         except Exception as e:
             logger.error(f"Error getting Twitch stream URL: {e}")
     else:
-        # YouTube live streams have separate video & audio m3u8 feeds
-        fmt = "311+234/231+234/230+234/bestvideo+bestaudio/best"
+        # YouTube live streams: android,web client returns master m3u8 in ~2s
         try:
             result = subprocess.run(
-                ["yt-dlp", "--no-warnings", "--socket-timeout", "10", "-g", "-f", fmt, channel_url],
+                [
+                    "yt-dlp",
+                    "--no-warnings",
+                    "--socket-timeout", "5",
+                    "--extractor-args", "youtube:player_client=android,web",
+                    "-g",
+                    channel_url,
+                ],
                 capture_output=True,
                 text=True,
-                timeout=15,
+                timeout=20,
             )
             if result.returncode == 0 and result.stdout.strip():
-                urls = result.stdout.strip().split("\n")
+                urls = [u.strip() for u in result.stdout.strip().split("\n") if u.strip()]
                 if len(urls) >= 2:
                     logger.info("Got YouTube video + audio stream URLs")
                     return {"video": urls[0], "audio": urls[1]}
                 elif len(urls) == 1:
+                    logger.info("Got YouTube master HLS stream URL (combined video+audio)")
                     return {"video": urls[0], "audio": None}
         except Exception as e:
             logger.error(f"Error getting YouTube stream URL: {e}")
 
-    # Universal last-resort fallback
+    # Fallback with explicit formats
     try:
         result = subprocess.run(
-            ["yt-dlp", "--no-warnings", "-g", channel_url],
+            [
+                "yt-dlp",
+                "--no-warnings",
+                "--socket-timeout", "8",
+                "--extractor-args", "youtube:player_client=android,web",
+                "-g",
+                "-f", "best[protocol^=m3u8]/95/94/best",
+                channel_url,
+            ],
             capture_output=True,
             text=True,
-            timeout=15,
+            timeout=20,
         )
         if result.returncode == 0 and result.stdout.strip():
-            urls = result.stdout.strip().split("\n")
+            urls = [u.strip() for u in result.stdout.strip().split("\n") if u.strip()]
             return {"video": urls[0], "audio": urls[1] if len(urls) > 1 else None}
     except Exception as e:
         logger.error(f"Fallback stream URL error: {e}")

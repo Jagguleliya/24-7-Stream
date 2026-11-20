@@ -546,28 +546,41 @@ def main_loop(override_preview: Optional[bool] = None):
     logger.info("=" * 60)
 
     current_stream: Optional[LiveStream] = None
+    speed_check_counter = 0
 
     while running:
         try:
+            # 1. If FFmpeg is running and healthy: keep broadcasting without interruption!
+            if current_ffmpeg and current_ffmpeg.poll() is None:
+                speed_check_counter += 1
+                # If currently streaming a fallback (priority > 1), check every ~3 minutes if Speed went live
+                if current_stream and current_stream.priority > 1 and speed_check_counter >= 12:
+                    speed_check_counter = 0
+                    config = load_config()
+                    speed_channel = next((c for c in config.get("priority_channels", []) if "speed" in c["name"].lower()), None)
+                    if speed_channel:
+                        speed_live = check_channel_live(speed_channel)
+                        if speed_live:
+                            logger.info(f"🔥 IShowSpeed is LIVE! Upgrading stream from {current_stream.name} → IShowSpeed...")
+                            current_ffmpeg = run_direct_stream(speed_live, config, encoder, preview_mode)
+                            current_stream = speed_live
+
+                time.sleep(15)
+                continue
+
+            # 2. FFmpeg is not running (first start, or streamer went offline/disconnected)
+            if current_stream:
+                logger.warning(f"⚠️ Stream for {current_stream.name} ended or disconnected. Reconnecting...")
+                current_stream = None
+
             config = load_config()
             selected = select_stream(config)
 
             if selected:
-                # If already streaming this channel and FFmpeg is still healthy, keep going
-                if current_stream and current_stream.name == selected.name:
-                    if current_ffmpeg and current_ffmpeg.poll() is None:
-                        logger.debug(f"Still streaming {current_stream.name}...")
-                        time.sleep(poll_interval)
-                        continue
-                    else:
-                        logger.warning(f"⚠️ FFmpeg died for {current_stream.name}, restarting...")
-
-                if current_ffmpeg and current_ffmpeg.poll() is None:
-                    logger.info(f"🔄 Switching from {current_stream.name if current_stream else 'standby'} → {selected.name}")
-
                 logger.info(f"🎮 Streaming: {selected.name} — {selected.title} ({selected.viewers} viewers)")
                 current_ffmpeg = run_direct_stream(selected, config, encoder, preview_mode)
                 current_stream = selected
+                speed_check_counter = 0
 
                 if preview_mode:
                     current_ffmpeg.wait()
@@ -575,18 +588,17 @@ def main_loop(override_preview: Optional[bool] = None):
                     running = False
                     break
             else:
-                if current_stream is not None or current_ffmpeg is None or current_ffmpeg.poll() is not None:
-                    logger.info("📺 Entering Standby mode (all targets offline)...")
-                    current_ffmpeg = run_standby_loop(config, encoder, preview_mode)
-                    current_stream = None
+                logger.info("📺 Entering Standby mode (all targets offline)...")
+                current_ffmpeg = run_standby_loop(config, encoder, preview_mode)
+                current_stream = None
 
-                    if preview_mode:
-                        current_ffmpeg.wait()
-                        logger.info("✅ Standby preview saved to standby_preview.mp4")
-                        running = False
-                        break
+                if preview_mode:
+                    current_ffmpeg.wait()
+                    logger.info("✅ Standby preview saved to standby_preview.mp4")
+                    running = False
+                    break
 
-            time.sleep(poll_interval)
+            time.sleep(5)
 
         except KeyboardInterrupt:
             break

@@ -108,6 +108,19 @@ def main():
         start_health_server(port)
         logger.info(f"✅ Health server active on port {port}")
 
+        def keep_alive_worker():
+            render_url = os.environ.get("RENDER_EXTERNAL_URL", "https://two4-7-stream-uul0.onrender.com")
+            import urllib.request
+            while True:
+                time.sleep(240)
+                try:
+                    with urllib.request.urlopen(f"{render_url}/health", timeout=10) as r:
+                        logger.debug(f"Self keep-alive ping: {r.status}")
+                except Exception as e:
+                    logger.debug(f"Self keep-alive error: {e}")
+
+        threading.Thread(target=keep_alive_worker, daemon=True).start()
+
     # 2. Start Chat Monetization Bot
     from chat_bot import start_chat_bot
     bot = start_chat_bot(config)
