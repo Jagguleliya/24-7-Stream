@@ -96,6 +96,26 @@ def detect_encoder() -> str:
     return "libx264"
 
 
+def resolve_qr_image_path(qr_cfg: dict) -> Optional[str]:
+    """Resolves the best valid binary image file for QR overlay."""
+    candidates = [
+        qr_cfg.get("image_path", "assets/overlays/upi_qr.png"),
+        "/etc/secrets/upi_qr.png",
+        "upi_qr.png",
+        "assets/overlays/sample_qr.png",
+    ]
+    for c in candidates:
+        if c and os.path.exists(c) and os.path.getsize(c) > 100:
+            try:
+                with open(c, "rb") as f:
+                    header = f.read(8)
+                    if header.startswith(b"\x89PNG") or header.startswith(b"\xff\xd8"):
+                        return c
+            except Exception:
+                continue
+    return None
+
+
 def build_ffmpeg_command(
     config: dict,
     encoder: str,
@@ -138,14 +158,8 @@ def build_ffmpeg_command(
         next_input = 1
 
     # QR code overlay image
-    qr_path = qr_cfg.get("image_path", "assets/overlays/upi_qr.png")
-    if os.path.exists("/etc/secrets/upi_qr.png"):
-        qr_path = "/etc/secrets/upi_qr.png"
-    elif os.path.exists("upi_qr.png"):
-        qr_path = "upi_qr.png"
-    elif not os.path.exists(qr_path) and os.path.exists("assets/overlays/sample_qr.png"):
-        qr_path = "assets/overlays/sample_qr.png"
-    has_qr = os.path.exists(qr_path) and qr_cfg.get("enabled", True)
+    qr_path = resolve_qr_image_path(qr_cfg)
+    has_qr = qr_path is not None and qr_cfg.get("enabled", True)
     qr_input_idx = None
     if has_qr:
         cmd += ["-i", qr_path]
@@ -382,14 +396,8 @@ def run_standby_loop(config: dict, encoder: str, preview_mode: bool):
     cmd += ["-f", "lavfi", "-i", f"color=c=0x0f172a:s={resolution}:d=3600:r={fps}"]
     next_input = 1
 
-    qr_path = qr_cfg.get("image_path", "assets/overlays/upi_qr.png")
-    if os.path.exists("/etc/secrets/upi_qr.png"):
-        qr_path = "/etc/secrets/upi_qr.png"
-    elif os.path.exists("upi_qr.png"):
-        qr_path = "upi_qr.png"
-    elif not os.path.exists(qr_path) and os.path.exists("assets/overlays/sample_qr.png"):
-        qr_path = "assets/overlays/sample_qr.png"
-    has_qr = os.path.exists(qr_path) and qr_cfg.get("enabled", True)
+    qr_path = resolve_qr_image_path(qr_cfg)
+    has_qr = qr_path is not None and qr_cfg.get("enabled", True)
     qr_input_idx = None
     if has_qr:
         cmd += ["-i", qr_path]
