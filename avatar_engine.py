@@ -21,7 +21,7 @@ VOICE_DIR = Path("assets/audio/voice_lines")
 VOICE_LOOP_FILE = Path("assets/audio/voice_loop.mp3")
 
 
-async def generate_voice_line(text: str, output_path: str, voice: str = "en-US-GuyNeural") -> bool:
+async def generate_voice_line(text: str, output_path: str, voice: str = "en-US-AvaNeural") -> bool:
     """Generate a TTS audio file using edge-tts."""
     try:
         import edge_tts
@@ -108,7 +108,8 @@ def generate_voice_loop(interval_seconds: int = 120, initial_delay: int = 2, pre
 def create_avatar_frames():
     """
     Create animated avatar frames using Pillow.
-    Generates a bouncing circle face with blinking eyes and talking mouth expressions.
+    Uses realistic female streamer webcam base (streamer_base.jpg) with rounded corners,
+    subtle natural breathing motion, animated pulsing RGB border, and LIVE CAM HUD!
     """
     try:
         from PIL import Image, ImageDraw
@@ -117,64 +118,66 @@ def create_avatar_frames():
         return
 
     AVATAR_DIR.mkdir(parents=True, exist_ok=True)
-    size = 150
-    frames = 30  # 30 frames for a smooth bounce loop
-
+    base_path = Path("assets/overlays/streamer_base.jpg")
+    frames = 30
+    w, h = 240, 140
     import math
 
+    if base_path.exists():
+        try:
+            base = Image.open(base_path).convert("RGBA")
+            orig_w, orig_h = base.size
+            crop_w = int(orig_h * (w / h))
+            left = max(0, (orig_w - crop_w) // 2)
+            streamer = base.crop((left, 0, left + crop_w, orig_h)).resize((w, h), Image.Resampling.LANCZOS)
+
+            radius = 10
+            mask = Image.new("L", (w, h), 0)
+            ImageDraw.Draw(mask).rounded_rectangle([(0, 0), (w, h)], radius=radius, fill=255)
+
+            for i in range(frames):
+                frame = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+                shift_y = int(1.5 * math.sin(2 * math.pi * i / frames))
+                streamer_shifted = streamer.copy()
+                if shift_y != 0:
+                    streamer_shifted = Image.new("RGBA", (w, h), (15, 23, 42, 255))
+                    streamer_shifted.paste(streamer, (0, shift_y))
+
+                frame.paste(streamer_shifted, (0, 0), mask)
+                draw = ImageDraw.Draw(frame)
+
+                # Pulsing RGB border
+                hue_phase = i / frames
+                r_val = int(128 + 127 * math.sin(2 * math.pi * hue_phase))
+                g_val = int(128 + 127 * math.sin(2 * math.pi * hue_phase + 2.094))
+                b_val = int(128 + 127 * math.sin(2 * math.pi * hue_phase + 4.188))
+                draw.rounded_rectangle([(0, 0), (w - 1, h - 1)], radius=radius, outline=(r_val, g_val, b_val, 220), width=2)
+
+                # Top-left LIVE CAM indicator
+                dot_alpha = int(180 + 75 * math.sin(2 * math.pi * i / 15))
+                draw.ellipse([(8, 8), (14, 14)], fill=(255, 0, 0, dot_alpha))
+                draw.text((18, 5), "LIVE CAM", fill=(255, 255, 255, 230))
+
+                # Bottom tag
+                draw.rectangle([(0, h - 20), (w, h)], fill=(0, 0, 0, 140))
+                draw.text((10, h - 17), "CO-HOST REACTION", fill=(240, 240, 240, 220))
+
+                frame.save(AVATAR_DIR / f"frame_{i:03d}.png")
+
+            logger.info(f"Generated {frames} realistic female streamer webcam frames in {AVATAR_DIR}")
+            return
+        except Exception as e:
+            logger.warning(f"Error creating realistic webcam frames, using fallback: {e}")
+
+    # Fallback procedural generation if streamer_base.jpg cannot be loaded
     for frame_idx in range(frames):
-        img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        img = Image.new("RGBA", (w, h), (15, 23, 42, 220))
         draw = ImageDraw.Draw(img)
-
-        # Bounce offset (sine wave)
-        bounce_y = int(8 * math.sin(2 * math.pi * frame_idx / frames))
-        center_y = size // 2 + bounce_y
-
-        # Head circle
-        head_r = 45
-        draw.ellipse(
-            [size // 2 - head_r, center_y - head_r, size // 2 + head_r, center_y + head_r],
-            fill=(255, 220, 180, 255),
-            outline=(200, 160, 120, 255),
-            width=2,
-        )
-
-        # Hair / cap
-        draw.chord(
-            [size // 2 - head_r - 2, center_y - head_r - 4, size // 2 + head_r + 2, center_y],
-            180, 360,
-            fill=(60, 40, 30, 255),
-            outline=(40, 25, 20, 255),
-            width=2,
-        )
-
-        # Eyes (blinking every 15 frames)
-        eye_y = center_y - 10
-        if frame_idx % 15 < 13:  # open eyes
-            draw.ellipse([size // 2 - 18, eye_y - 5, size // 2 - 10, eye_y + 5], fill=(40, 40, 40, 255))
-            draw.ellipse([size // 2 + 10, eye_y - 5, size // 2 + 18, eye_y + 5], fill=(40, 40, 40, 255))
-        else:  # blink
-            draw.line([size // 2 - 18, eye_y, size // 2 - 10, eye_y], fill=(40, 40, 40, 255), width=2)
-            draw.line([size // 2 + 10, eye_y, size // 2 + 18, eye_y], fill=(40, 40, 40, 255), width=2)
-
-        # Mouth (animated open/closed for talking effect)
-        mouth_y = center_y + 12
-        if frame_idx % 6 < 3:
-            draw.ellipse(
-                [size // 2 - 10, mouth_y - 4, size // 2 + 10, mouth_y + 8],
-                fill=(200, 80, 80, 255),
-            )
-        else:
-            draw.arc(
-                [size // 2 - 12, mouth_y - 2, size // 2 + 12, mouth_y + 6],
-                0, 180,
-                fill=(200, 80, 80, 255),
-                width=2,
-            )
-
+        draw.rounded_rectangle([(0, 0), (w - 1, h - 1)], radius=8, outline=(0, 200, 255, 220), width=2)
+        draw.text((20, h // 2 - 10), "STREAMER REACTION CAM", fill=(255, 255, 255, 240))
         img.save(AVATAR_DIR / f"frame_{frame_idx:03d}.png")
 
-    logger.info(f"Generated {frames} avatar frames in {AVATAR_DIR}")
+    logger.info(f"Generated {frames} fallback avatar frames in {AVATAR_DIR}")
 
 
 if __name__ == "__main__":

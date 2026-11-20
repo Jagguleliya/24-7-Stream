@@ -47,6 +47,19 @@ def debug_status():
     })
 
 
+@app.route("/logs")
+def view_logs():
+    try:
+        log_path = "stream.log"
+        if os.path.exists(log_path):
+            with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+                lines = f.readlines()
+            return "\n".join([line.strip() for line in lines[-60:]]), 200, {"Content-Type": "text/plain"}
+        return "stream.log not found", 200, {"Content-Type": "text/plain"}
+    except Exception as e:
+        return f"Error reading logs: {e}", 500, {"Content-Type": "text/plain"}
+
+
 @app.route("/status")
 def status():
     try:

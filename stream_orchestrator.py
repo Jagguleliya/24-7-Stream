@@ -238,13 +238,14 @@ def build_ffmpeg_command(
         )
         current_vid = "[with_qr_label]"
 
-    # Avatar overlay bottom-right
+    # Avatar overlay bottom-right (16:9 streamer webcam box)
     if has_avatar and avatar_input_idx is not None:
-        av_size = avatar_cfg.get("size", 150)
+        av_w = avatar_cfg.get("width", 240)
+        av_h = avatar_cfg.get("height", 140)
         av_margin = 20
-        av_x = w - av_size - av_margin
-        av_y = h - av_size - av_margin - 40
-        filters.append(f"[{avatar_input_idx}:v]scale={av_size}:{av_size}[avatar_scaled]")
+        av_x = w - av_w - av_margin
+        av_y = h - av_h - av_margin - 25
+        filters.append(f"[{avatar_input_idx}:v]scale={av_w}:{av_h}[avatar_scaled]")
         filters.append(f"{current_vid}[avatar_scaled]overlay={av_x}:{av_y}[with_avatar]")
         current_vid = "[with_avatar]"
 
@@ -454,10 +455,11 @@ def run_standby_loop(config: dict, encoder: str, preview_mode: bool):
         current_vid = "[with_qr_label]"
 
     if has_avatar and avatar_input_idx is not None:
-        av_size = avatar_cfg.get("size", 150)
-        av_x = w - av_size - 20
-        av_y = h - av_size - 60
-        filters.append(f"[{avatar_input_idx}:v]scale={av_size}:{av_size}[av_s]")
+        av_w = avatar_cfg.get("width", 240)
+        av_h = avatar_cfg.get("height", 140)
+        av_x = w - av_w - 20
+        av_y = h - av_h - 45
+        filters.append(f"[{avatar_input_idx}:v]scale={av_w}:{av_h}[av_s]")
         filters.append(f"{current_vid}[av_s]overlay={av_x}:{av_y}[with_av]")
         current_vid = "[with_av]"
 
@@ -516,10 +518,17 @@ def main_loop(override_preview: Optional[bool] = None):
 
     encoder = detect_encoder()
 
-    logger.info("🎨 Preparing avatar frames and voice loop...")
-    create_avatar_frames()
-    generate_all_voice_lines(config)
-    generate_voice_loop(interval_seconds=120, initial_delay=2, preview_mode=preview_mode)
+    def prep_assets_async():
+        try:
+            logger.info("🎨 Preparing avatar frames and voice loop in background...")
+            create_avatar_frames()
+            generate_all_voice_lines(config)
+            generate_voice_loop(interval_seconds=120, initial_delay=2, preview_mode=preview_mode)
+            logger.info("✅ Avatar and voice assets ready")
+        except Exception as e:
+            logger.warning(f"Asset prep error: {e}")
+
+    threading.Thread(target=prep_assets_async, daemon=True).start()
 
     logger.info("=" * 60)
     logger.info("🚀 Synchronized Stream Orchestrator Starting")

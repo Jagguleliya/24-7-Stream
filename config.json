@@ -50,18 +50,19 @@
     "avatar": {
         "enabled": true,
         "position": "bottom_right",
-        "size": 150,
+        "width": 240,
+        "height": 140,
         "voice_interval_seconds": 180,
         "voice_lines": [
-            "Welcome everyone! Have fun watching the stream!",
-            "If you're enjoying, scan the QR code to support us!",
-            "Drop a superchat and I'll shout you out!",
-            "GTA 6 hype is real! Let's gooo!",
-            "Don't forget to like, subscribe and share the stream!",
-            "Support the stream! Scan the QR code on screen!",
-            "Type in chat! Let's make this stream lit!",
-            "Share this stream with your friends!",
-            "Every donation helps keep this stream running 24 7!"
+            "OMG did you see that?! That was completely insane!",
+            "Welcome in everyone! Grab some snacks and enjoy the stream!",
+            "Wait, no way he survived that five-star chase! Look at the cops!",
+            "Chat, what do you think? Drop a 1 in chat if you're hyped for GTA 6!",
+            "If you're loving the stream, make sure to hit that like button and subscribe!",
+            "Thank you so much to everyone supporting the stream today, you guys are the best!",
+            "He's driving like an absolute maniac right now, haha, I can't even look!",
+            "Drop your predictions in the chat—will he escape or get busted?",
+            "Don't forget to share the stream with your squad! Let's get these hype numbers up!"
         ]
     },
     "qr_overlay": {

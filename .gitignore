@@ -7,11 +7,14 @@ assets/overlays/upi_qr.png
 # Video & Audio temporary test files
 preview_output.mp4
 standby_preview.mp4
+assets/audio/voice_loop.mp3
 *.mp4
-*.mp3
 *.wav
 *.ts
 *.jpg
+!assets/overlays/streamer_base.jpg
+*.mp3
+!assets/audio/voice_lines/*.mp3
 *.png.bak
 
 # Python cache
