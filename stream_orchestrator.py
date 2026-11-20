@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from stream_selector import select_stream, LiveStream, get_best_stream_url
+from stream_selector import select_stream, LiveStream, get_best_stream_url, check_channel_live
 from avatar_engine import (
     create_avatar_frames,
     generate_all_voice_lines,
@@ -325,27 +325,26 @@ def build_ffmpeg_command(
     return cmd
 
 
-def run_direct_stream(selected: LiveStream, config: dict, encoder: str, preview_mode: bool):
+def run_direct_stream(selected: LiveStream, config: dict, encoder: str, preview_mode: bool) -> Optional[subprocess.Popen]:
     """
     Directly ingests video and audio HLS streams into FFmpeg without pipe buffering.
     Eliminates pipe-induced desync, prevents timestamp drift, and cuts CPU/RAM usage.
     """
     global current_ffmpeg, current_ytdlp
 
-    cleanup_processes()
-
     logger.info(f"📥 Resolving direct HLS stream URLs for: {selected.name} ({selected.url})")
     urls = get_best_stream_url(selected.url, selected.platform)
 
     if urls and urls.get("video"):
+        cleanup_processes()
         logger.info("⚡ Ingesting direct HLS stream URLs (zero-pipe, frame-accurate sync)")
         ffmpeg_cmd = build_ffmpeg_command(config, encoder, preview_mode, stream_urls=urls, streamer_name=selected.name)
         logger.info(f"🎬 Launching FFmpeg encoder: {encoder} (preview={preview_mode})")
         current_ffmpeg = subprocess.Popen(ffmpeg_cmd)
         return current_ffmpeg
     else:
-        logger.warning(f"⚠️ Could not extract direct URLs for {selected.name}. Running Standby screen to keep channel 100% LIVE...")
-        return run_standby_loop(config, encoder, preview_mode)
+        logger.warning(f"⚠️ Could not extract direct URLs for {selected.name}")
+        return None
 
 
 def run_piped_stream(target_url: str, config: dict, encoder: str, preview_mode: bool, streamer_name: str = ""):
@@ -550,11 +549,11 @@ def main_loop(override_preview: Optional[bool] = None):
 
     while running:
         try:
-            # 1. If FFmpeg is running and healthy: keep broadcasting without interruption!
-            if current_ffmpeg and current_ffmpeg.poll() is None:
+            # 1. If actively broadcasting GAMEPLAY: keep running without interruption!
+            if current_ffmpeg and current_ffmpeg.poll() is None and current_stream is not None:
                 speed_check_counter += 1
-                # If currently streaming a fallback (priority > 1), check every ~3 minutes if Speed went live
-                if current_stream and current_stream.priority > 1 and speed_check_counter >= 12:
+                # If currently streaming a fallback (priority > 1), check every ~2 minutes if Speed went live
+                if current_stream.priority > 1 and speed_check_counter >= 8:
                     speed_check_counter = 0
                     config = load_config()
                     speed_channel = next((c for c in config.get("priority_channels", []) if "speed" in c["name"].lower()), None)
@@ -562,14 +561,16 @@ def main_loop(override_preview: Optional[bool] = None):
                         speed_live = check_channel_live(speed_channel)
                         if speed_live:
                             logger.info(f"🔥 IShowSpeed is LIVE! Upgrading stream from {current_stream.name} → IShowSpeed...")
-                            current_ffmpeg = run_direct_stream(speed_live, config, encoder, preview_mode)
-                            current_stream = speed_live
+                            proc = run_direct_stream(speed_live, config, encoder, preview_mode)
+                            if proc:
+                                current_ffmpeg = proc
+                                current_stream = speed_live
 
                 time.sleep(15)
                 continue
 
-            # 2. FFmpeg is not running (first start, or streamer went offline/disconnected)
-            if current_stream:
+            # 2. If we reach here, we are NOT streaming gameplay (FFmpeg died, or we are in Standby mode)
+            if current_stream and (current_ffmpeg is None or current_ffmpeg.poll() is not None):
                 logger.warning(f"⚠️ Stream for {current_stream.name} ended or disconnected. Reconnecting...")
                 current_stream = None
 
@@ -577,18 +578,24 @@ def main_loop(override_preview: Optional[bool] = None):
             selected = select_stream(config)
 
             if selected:
-                logger.info(f"🎮 Streaming: {selected.name} — {selected.title} ({selected.viewers} viewers)")
-                current_ffmpeg = run_direct_stream(selected, config, encoder, preview_mode)
-                current_stream = selected
-                speed_check_counter = 0
+                logger.info(f"🎮 Found live stream: {selected.name} — {selected.title} ({selected.viewers} viewers)")
+                proc = run_direct_stream(selected, config, encoder, preview_mode)
+                if proc and proc.poll() is None:
+                    current_ffmpeg = proc
+                    current_stream = selected
+                    speed_check_counter = 0
+                    logger.info(f"✅ Successfully broadcasting gameplay: {selected.name}")
 
-                if preview_mode:
-                    current_ffmpeg.wait()
-                    logger.info("✅ Preview saved to preview_output.mp4")
-                    running = False
-                    break
-            else:
-                logger.info("📺 Entering Standby mode (all targets offline)...")
+                    if preview_mode:
+                        current_ffmpeg.wait()
+                        logger.info("✅ Preview saved to preview_output.mp4")
+                        running = False
+                        break
+                    continue
+
+            # 3. If no stream selected OR direct stream resolution failed, ensure Standby is running to keep channels live!
+            if current_ffmpeg is None or current_ffmpeg.poll() is not None:
+                logger.info("📺 Starting Standby screen to keep channels 100% LIVE...")
                 current_ffmpeg = run_standby_loop(config, encoder, preview_mode)
                 current_stream = None
 
@@ -598,7 +605,7 @@ def main_loop(override_preview: Optional[bool] = None):
                     running = False
                     break
 
-            time.sleep(5)
+            time.sleep(15)
 
         except KeyboardInterrupt:
             break
