@@ -1,15 +1,17 @@
 FROM python:3.11-slim
 
-# Install FFmpeg, curl (for healthcheck), and DejaVu fonts (for drawtext overlays)
+# Install FFmpeg, nodejs (JS challenge solver for yt-dlp/YouTube), curl, and DejaVu fonts
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg curl fonts-dejavu-core fontconfig && \
+    apt-get install -y --no-install-recommends ffmpeg nodejs curl fonts-dejavu-core fontconfig && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install Python deps
+# Upgrade pip and install Python deps
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir --upgrade yt-dlp
 
 # Copy project files
 COPY . .

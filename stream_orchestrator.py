@@ -344,8 +344,8 @@ def run_direct_stream(selected: LiveStream, config: dict, encoder: str, preview_
         current_ffmpeg = subprocess.Popen(ffmpeg_cmd)
         return current_ffmpeg
     else:
-        logger.warning("⚠️ Could not extract direct URLs, falling back to piped yt-dlp...")
-        return run_piped_stream(selected.url, config, encoder, preview_mode, streamer_name=selected.name)
+        logger.warning(f"⚠️ Could not extract direct URLs for {selected.name}. Running Standby screen to keep channel 100% LIVE...")
+        return run_standby_loop(config, encoder, preview_mode)
 
 
 def run_piped_stream(target_url: str, config: dict, encoder: str, preview_mode: bool, streamer_name: str = ""):
